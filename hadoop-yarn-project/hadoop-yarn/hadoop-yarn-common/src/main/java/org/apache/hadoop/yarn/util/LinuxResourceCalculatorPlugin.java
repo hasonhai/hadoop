@@ -52,8 +52,9 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   // We need the values for the following keys in meminfo
   private static final String MEMTOTAL_STRING = "MemTotal";
-  private static final String SWAPTOTAL_STRING = "SwapTotal";
+  private static final String MEMAVAILABLE_STRING = "MemAvailable"; //Ubuntu Only
   private static final String MEMFREE_STRING = "MemFree";
+  private static final String SWAPTOTAL_STRING = "SwapTotal";
   private static final String SWAPFREE_STRING = "SwapFree";
   private static final String INACTIVE_STRING = "Inactive";
 
@@ -83,6 +84,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private long ramSize = 0;
   private long swapSize = 0;
   private long ramSizeFree = 0;  // free ram space on the machine (kB)
+  private long ramSizeAvailable = 0; //available ram on the machine (kB) - Ubuntu
   private long swapSizeFree = 0; // free swap space on the machine (kB)
   private long inactiveSize = 0; // inactive cache memory (kB)
   private int numProcessors = 0; // number of processors on the system
@@ -169,6 +171,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
             swapSizeFree = Long.parseLong(mat.group(2));
           } else if (mat.group(1).equals(INACTIVE_STRING)) {
             inactiveSize = Long.parseLong(mat.group(2));
+          } else if (mat.group(1).equals(MEMAVAILABLE_STRING)) {
+            ramSizeAvailable = Long.parseLong(mat.group(2));
           }
         }
         str = in.readLine();
@@ -311,7 +315,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   @Override
   public long getAvailablePhysicalMemorySize() {
     readProcMemInfoFile(true);
-    return (ramSizeFree + inactiveSize) * 1024;
+    if (ramSizeAvailable > 0) //for Ubuntu
+      return ramSizeAvailable * 1024;
+    else
+      return (ramSizeFree + inactiveSize) * 1024;
   }
 
   /** {@inheritDoc} */
