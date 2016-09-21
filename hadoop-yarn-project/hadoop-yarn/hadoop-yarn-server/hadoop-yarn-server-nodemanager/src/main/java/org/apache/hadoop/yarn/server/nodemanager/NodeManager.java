@@ -85,6 +85,7 @@ public class NodeManager extends CompositeService
   private AsyncDispatcher dispatcher;
   private ContainerManagerImpl containerManager;
   private NodeStatusUpdater nodeStatusUpdater;
+  private NodeResourceMonitor nodeResourceMonitor;
   private static CompositeServiceShutdownHook nodeManagerShutdownHook; 
   private NMStateStoreService nmStore = null;
   
@@ -236,6 +237,7 @@ public class NodeManager extends CompositeService
     // Create monitoring service
     NodeResourceMonitor nodeResourceMonitor = createNodeResourceMonitor();
     addService(nodeResourceMonitor);
+    ((NMContext) context).setNodeResourceMonitor(nodeResourceMonitor);
 
     containerManager =
         createContainerManager(context, exec, del, nodeStatusUpdater,
@@ -348,6 +350,7 @@ public class NodeManager extends CompositeService
     private final NMContainerTokenSecretManager containerTokenSecretManager;
     private final NMTokenSecretManagerInNM nmTokenSecretManager;
     private ContainerManagementProtocol containerManager;
+    private NodeResourceMonitor nodeResourceMonitor;
     private final LocalDirsHandlerService dirsHandler;
     private final ApplicationACLsManager aclsManager;
     private WebServer webServer;
@@ -406,6 +409,15 @@ public class NodeManager extends CompositeService
     @Override
     public NodeHealthStatus getNodeHealthStatus() {
       return this.nodeHealthStatus;
+    }
+
+    @Override
+    public NodeResourceMonitor getNodeResourceMonitor() {
+      return this.nodeResourceMonitor;
+    }
+
+    public void setNodeResourceMonitor(NodeResourceMonitor nodeResourceMonitor) {
+      this.nodeResourceMonitor = nodeResourceMonitor;
     }
 
     @Override
@@ -481,7 +493,7 @@ public class NodeManager extends CompositeService
       ShutdownHookManager.get().addShutdownHook(nodeManagerShutdownHook,
                                                 SHUTDOWN_HOOK_PRIORITY);
       // System exit should be called only when NodeManager is instantiated from
-      // main() funtion
+      // main() function
       this.shouldExitOnShutdownEvent = true;
       this.init(conf);
       this.start();

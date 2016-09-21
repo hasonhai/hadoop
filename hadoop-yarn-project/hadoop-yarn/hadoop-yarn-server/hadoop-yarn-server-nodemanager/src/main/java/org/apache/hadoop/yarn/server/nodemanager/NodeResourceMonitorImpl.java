@@ -163,7 +163,7 @@ public class NodeResourceMonitorImpl extends AbstractService implements
                 //LOG.info("AvailMem = " + (AvailMem >> 20));
 
                 // calculate estimated resource usage
-                if ( realUsageWeight < 1 && realUsageWeight >= 0 ) {
+                if ( isEstimationEnabled() ) {
                     long estimatedPmem;
                     long estimatedVmem;
                     float estimatedCpu;
@@ -179,6 +179,8 @@ public class NodeResourceMonitorImpl extends AbstractService implements
                         // estimated size is a buffer, so cannot get lower than the real usage
                         if (estimatedPmem < pmem)
                             estimatedPmem = pmem;
+                        if (estimatedPmem > TotalMem)
+                            estimatedPmem = TotalMem;
                         if (estimatedVmem < vmem)
                             estimatedVmem = vmem;
                         if (estimatedCpu < cpu)
@@ -202,7 +204,7 @@ public class NodeResourceMonitorImpl extends AbstractService implements
                         ResourceUtilization.newInstance(
                                 (int) (pmem >> 20), // B -> MB
                                 (int) (vmem >> 20), // B -> MB
-                                cpu); // 1 CPU at 100% is 1 (comment may not correct)
+                                cpu); // percent of whole node
 
                 try {
                     Thread.sleep(monitoringInterval);
@@ -222,7 +224,7 @@ public class NodeResourceMonitorImpl extends AbstractService implements
    */
   //@Override
   public ResourceUtilization getUtilization() {
-      if (realUsageWeight < 1 && realUsageWeight >= 0) {
+      if (isEstimationEnabled()) {
           return this.estimatedUtilization;
       }
       else
@@ -235,8 +237,16 @@ public class NodeResourceMonitorImpl extends AbstractService implements
      * @param cCpu: number of core container request
      */
   public void updateEstimatedUtilization(int cMem, int cCpu ) {
-      int nCores = 2; //TODO: get number of cores of node
+      int nCores = resourceCalculatorPlugin.getNumProcessors();
       float pcCpu = cCpu/nCores;
       estimatedUtilization.addTo(cMem, cMem, pcCpu);
+      LOG.info("Add demand to estimation: Cmem:" + cMem + "MB, pcCPU: " + pcCpu);
+  }
+
+ public boolean isEstimationEnabled() {
+      if (realUsageWeight < 1 && realUsageWeight >= 0)
+          return true;
+      else
+          return false;
   }
 }

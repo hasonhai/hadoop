@@ -92,17 +92,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
-import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
-import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedContainersEvent;
-import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.ContainerManagerEvent;
-import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
+import org.apache.hadoop.yarn.server.nodemanager.*;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
-import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
-import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -725,6 +716,10 @@ public class ContainerManagerImpl extends CompositeService implements
         startContainerInternal(nmTokenIdentifier, containerTokenIdentifier,
           request);
         succeededContainers.add(containerId);
+        // TODO: add estimated resource utilization for container
+        int reqMem = containerTokenIdentifier.getResource().getMemory();
+        int reqCore = containerTokenIdentifier.getResource().getVirtualCores();
+        addDemandToEstimatedResource(reqMem, reqCore);
       } catch (YarnException e) {
         failedContainers.put(containerId, SerializedException.newInstance(e));
       } catch (InvalidToken ie) {
@@ -737,6 +732,17 @@ public class ContainerManagerImpl extends CompositeService implements
 
     return StartContainersResponse.newInstance(getAuxServiceMetaData(),
       succeededContainers, failedContainers);
+  }
+
+  /**
+   * Add container demand to the estimated resource
+   */
+  private void addDemandToEstimatedResource(int reqMem, int reqCore) {
+    NodeResourceMonitorImpl nodeResourceMonitor =
+            (NodeResourceMonitorImpl) this.context.getNodeResourceMonitor();
+    if (nodeResourceMonitor.isEstimationEnabled())
+      nodeResourceMonitor.updateEstimatedUtilization(reqMem, reqCore);
+    //do nothing if estimation is not enabled
   }
 
   private ContainerManagerApplicationProto buildAppProto(ApplicationId appId,
