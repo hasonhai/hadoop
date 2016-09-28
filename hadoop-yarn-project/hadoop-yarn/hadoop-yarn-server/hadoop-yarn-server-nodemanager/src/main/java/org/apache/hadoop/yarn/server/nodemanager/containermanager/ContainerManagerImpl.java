@@ -740,9 +740,10 @@ public class ContainerManagerImpl extends CompositeService implements
   private void addDemandToEstimatedResource(int reqMem, int reqCore) {
     NodeResourceMonitorImpl nodeResourceMonitor =
             (NodeResourceMonitorImpl) this.context.getNodeResourceMonitor();
-    if (nodeResourceMonitor.isEstimationEnabled())
-      nodeResourceMonitor.updateEstimatedUtilization(reqMem, reqCore);
-    //do nothing if estimation is not enabled
+    if (nodeResourceMonitor.isEstimationEnabled()) {
+      nodeResourceMonitor.registerNewDemandForEstimatedUtilization(reqMem, reqCore);
+    }
+    /* do nothing if estimation is not enabled */
   }
 
   private ContainerManagerApplicationProto buildAppProto(ApplicationId appId,

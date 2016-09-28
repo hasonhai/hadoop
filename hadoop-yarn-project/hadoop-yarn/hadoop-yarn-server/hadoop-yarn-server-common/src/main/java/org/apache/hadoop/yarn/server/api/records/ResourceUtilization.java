@@ -119,14 +119,14 @@ public abstract class ResourceUtilization implements
           }
 
     /**
-    * Add utilization to the current one.
-    * @param pmem Physical memory used to add.
-    * @param vmem Virtual memory used to add.
-    * @param cpu CPU utilization to add.
-    */
-          public void addTo(int pmem, int vmem, float cpu) {
+     * Add utilization to the current one.
+     * @param pmem Physical memory used to add.
+     * @param vmem Virtual memory used to add.
+     * @param cpu CPU utilization to add.
+     */
+    public void addTo(int pmem, int vmem, float cpu) {
             this.setPhysicalMemory(this.getPhysicalMemory() + pmem);
             this.setVirtualMemory(this.getVirtualMemory() + vmem);
             this.setCPU(this.getCPU() + cpu);
-          }
+    }
 }
