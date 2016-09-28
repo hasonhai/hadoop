@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -449,12 +450,23 @@ public class SchedulerApplicationAttempt {
       .hasNext();) {
       RMContainer rmContainer = i.next();
       Container container = rmContainer.getContainer();
+      ContainerType containerType = ContainerType.TASK;
+      // The working knowledge is that masterContainer for AM is null as it
+      // itself is the master container.
+      RMAppAttempt appAttempt =
+              rmContext.getRMApps()
+                      .get(container.getId().getApplicationAttemptId()
+                              .getApplicationId()).getCurrentAppAttempt();
+      if (appAttempt.getMasterContainer() == null
+              && appAttempt.getSubmissionContext().getUnmanagedAM() == false) {
+        containerType = ContainerType.APPLICATION_MASTER;
+      }
       try {
         // create container token and NMToken altogether.
         container.setContainerToken(rmContext.getContainerTokenSecretManager()
           .createContainerToken(container.getId(), container.getNodeId(),
             getUser(), container.getResource(), container.getPriority(),
-            rmContainer.getCreationTime(), this.logAggregationContext));
+            rmContainer.getCreationTime(), this.logAggregationContext, containerType));
         NMToken nmToken =
             rmContext.getNMTokenSecretManager().createAndGetNMToken(getUser(),
               getApplicationAttemptId(), container);

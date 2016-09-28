@@ -39,8 +39,11 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTypeProto;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 
 import com.google.protobuf.TextFormat;
 
@@ -64,13 +67,13 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       String hostName, String appSubmitter, Resource r, long expiryTimeStamp,
       int masterKeyId, long rmIdentifier, Priority priority, long creationTime) {
     this(containerID, hostName, appSubmitter, r, expiryTimeStamp, masterKeyId,
-        rmIdentifier, priority, creationTime, null);
+        rmIdentifier, priority, creationTime, null, ContainerType.TASK);
   }
 
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
       String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
       long rmIdentifier, Priority priority, long creationTime,
-      LogAggregationContext logAggregationContext) {
+      LogAggregationContext logAggregationContext, ContainerType containerType) {
     ContainerTokenIdentifierProto.Builder builder = 
         ContainerTokenIdentifierProto.newBuilder();
     if (containerID != null) {
@@ -93,6 +96,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       builder.setLogAggregationContext(
           ((LogAggregationContextPBImpl)logAggregationContext).getProto());
     }
+    builder.setContainerType(convertToProtoFormat(containerType));
     proto = builder.build();
   }
 
@@ -142,6 +146,18 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   public long getCreationTime() {
     return proto.getCreationTime();
   }
+
+  /**
+   * Get the ContainerType of container to allocate
+   * @return ContainerType
+   */
+  public ContainerType getContainerType(){
+    if (!proto.hasContainerType()) {
+      return null;
+    }
+    return convertFromProtoFormat(proto.getContainerType());
+  }
+
   /**
    * Get the RMIdentifier of RM in which containers are allocated
    * @return RMIdentifier
@@ -209,6 +225,13 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
     return false;
+  }
+
+  private ContainerTypeProto convertToProtoFormat(ContainerType containerType) {
+    return ProtoUtils.convertToProtoFormat(containerType);
+  }
+  private ContainerType convertFromProtoFormat(ContainerTypeProto containerType) {
+    return ProtoUtils.convertFromProtoFormat(containerType);
   }
 
   @Override

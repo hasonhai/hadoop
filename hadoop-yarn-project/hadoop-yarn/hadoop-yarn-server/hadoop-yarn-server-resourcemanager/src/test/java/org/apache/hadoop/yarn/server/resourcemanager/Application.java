@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.Task.State;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
@@ -166,6 +168,13 @@ public class Application {
     final ResourceScheduler scheduler = resourceManager.getResourceScheduler();
     
     resourceManager.getClientRMService().submitApplication(request);
+
+    RMAppEvent event = new RMAppEvent(this.applicationId, RMAppEventType.START);
+    resourceManager.getRMContext().getRMApps().get(applicationId).handle(event);
+    event = new RMAppEvent(this.applicationId, RMAppEventType.APP_NEW_SAVED);
+    resourceManager.getRMContext().getRMApps().get(applicationId).handle(event);
+    event = new RMAppEvent(this.applicationId, RMAppEventType.APP_ACCEPTED);
+    resourceManager.getRMContext().getRMApps().get(applicationId).handle(event);
 
     // Notify scheduler
     AppAddedSchedulerEvent addAppEvent =
