@@ -65,7 +65,9 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -723,13 +725,25 @@ public class TestContainer {
     final Map<String, LocalResource> localResources;
     final Map<String, ByteBuffer> serviceData;
 
+    WrappedContainer(int appId, long timestamp, int id, String user,
+                     boolean withLocalRes, boolean withServiceData) throws IOException {
+      this(appId, timestamp, id, user, ContainerType.TASK,
+              withLocalRes, withServiceData);
+    }
+
     WrappedContainer(int appId, long timestamp, int id, String user)
         throws IOException {
-      this(appId, timestamp, id, user, true, false);
+      this(appId, timestamp, id, user, ContainerType.TASK, true, false);
+    }
+
+    WrappedContainer(int appId, long timestamp, int id, String user,
+        ContainerType containerType)
+        throws IOException {
+      this(appId, timestamp, id, user, containerType, true, false);
     }
 
     @SuppressWarnings("rawtypes")
-    WrappedContainer(int appId, long timestamp, int id, String user,
+    WrappedContainer(int appId, long timestamp, int id, String user, ContainerType containerType,
         boolean withLocalRes, boolean withServiceData) throws IOException {
       dispatcher = new DrainDispatcher();
       dispatcher.init(new Configuration());
@@ -780,7 +794,8 @@ public class TestContainer {
       long currentTime = System.currentTimeMillis();
       ContainerTokenIdentifier identifier = 
           new ContainerTokenIdentifier(cId, "127.0.0.1", user, resource,
-            currentTime + 10000L, 123, currentTime, Priority.newInstance(0), 0);
+            currentTime + 10000L, 123, currentTime, Priority.newInstance(0),
+                  currentTime, null, containerType);
       Token token =
           BuilderUtils.newContainerToken(BuilderUtils.newNodeId(host, port),
             "password".getBytes(), identifier);

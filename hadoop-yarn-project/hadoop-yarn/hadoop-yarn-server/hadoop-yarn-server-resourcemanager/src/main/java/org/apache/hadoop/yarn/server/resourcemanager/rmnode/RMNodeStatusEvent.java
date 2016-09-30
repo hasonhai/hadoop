@@ -25,30 +25,27 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 
 public class RMNodeStatusEvent extends RMNodeEvent {
 
-  private final NodeHealthStatus nodeHealthStatus;
-  private final List<ContainerStatus> containersCollection;
+  private final NodeStatus nodeStatus;
   private final NodeHeartbeatResponse latestResponse;
-  private final List<ApplicationId> keepAliveAppIds;
 
-  public RMNodeStatusEvent(NodeId nodeId, NodeHealthStatus nodeHealthStatus,
-      List<ContainerStatus> collection, List<ApplicationId> keepAliveAppIds,
+  public RMNodeStatusEvent(NodeId nodeId, NodeStatus nodeStatus,
       NodeHeartbeatResponse latestResponse) {
     super(nodeId, RMNodeEventType.STATUS_UPDATE);
-    this.nodeHealthStatus = nodeHealthStatus;
-    this.containersCollection = collection;
-    this.keepAliveAppIds = keepAliveAppIds;
+    this.nodeStatus = nodeStatus;
     this.latestResponse = latestResponse;
   }
 
   public NodeHealthStatus getNodeHealthStatus() {
-    return this.nodeHealthStatus;
+    return this.nodeStatus.getNodeHealthStatus();
   }
 
   public List<ContainerStatus> getContainers() {
-    return this.containersCollection;
+    return this.nodeStatus.getContainersStatuses();
   }
 
   public NodeHeartbeatResponse getLatestResponse() {
@@ -56,6 +53,14 @@ public class RMNodeStatusEvent extends RMNodeEvent {
   }
   
   public List<ApplicationId> getKeepAliveAppIds() {
-    return this.keepAliveAppIds;
+    return this.nodeStatus.getKeepAliveApplications();
+  }
+
+  public ResourceUtilization getAggregatedContainersUtilization() {
+    return this.nodeStatus.getContainersUtilization();
+  }
+
+  public ResourceUtilization getNodeUtilization() {
+    return this.nodeStatus.getNodeUtilization();
   }
 }

@@ -256,9 +256,46 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
     }
   }
 
-  public void updateNodeResource(NodeId node, Resource newResource) throws IOException {
+  public void updateNodeResource(NodeId node, Resource newResource) {
     deactivateNode(node);
     activateNode(node, newResource);
+  }
+
+  public void adjustNodeResource(NodeId node, Resource newResource) {
+    Node nm = getNMInNodeSet(node);
+    if (nm == null) {
+      return;
+    }
+
+    if (nm.running) {
+      Resource delta = Resources.subtract(newResource, nm.resource);
+      Set<String> labels = getLabelsByNode(node);
+      if (labels.isEmpty()) {
+        NodeLabel label = labelCollections.get(NO_LABEL);
+        label.removeNode(nm.resource);
+        label.addNode(newResource);
+        // update queues, all queues can access this node
+        for (Queue q : queueCollections.values()) {
+          Resources.addTo(q.resource, delta);
+        }
+      } else {
+        for (String labelName : labels) {
+          NodeLabel label = labelCollections.get(labelName);
+          if (label != null) {
+            label.removeNode(nm.resource);
+            label.addNode(newResource);
+          }
+        }
+        // update queues that can access this node
+        for (Queue q : queueCollections.values()) {
+          if (isNodeUsableByQueue(labels, q)) {
+            Resources.addTo(q.resource, delta);
+          }
+        }
+      }
+    }
+
+    nm.resource = newResource;
   }
 
   public void reinitializeQueueLabels(Map<String, Set<String>> queueToLabels) {

@@ -1058,13 +1058,6 @@ int launch_container_as_user(const char *user, const char *app_id,
     goto cleanup;
   }
 
-  // write pid to pidfile
-  if (pid_file == NULL
-      || write_pid_to_file_as_nm(pid_file, pid) != 0) {
-    exit_code = WRITE_PIDFILE_FAILED;
-    goto cleanup;
-  }
-
   // cgroups-based resource enforcement
   if (resources_key != NULL && ! strcmp(resources_key, "cgroups")) {
 
@@ -1091,6 +1084,13 @@ int launch_container_as_user(const char *user, const char *app_id,
   if (log_create_result != 0) {
     return log_create_result;
   }
+
+   // write pid to pidfile
+   if (pid_file == NULL
+       || write_pid_to_file_as_nm(pid_file, pid) != 0) {
+     exit_code = WRITE_PIDFILE_FAILED;
+     goto cleanup;
+   }
 
   // give up root privs
   if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {

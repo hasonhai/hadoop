@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
@@ -78,6 +79,8 @@ public class ContainersMonitorImpl extends AbstractService implements
   private static final long UNKNOWN_MEMORY_LIMIT = -1L;
   private int nodeCpuPercentageForYARN;
 
+  private ResourceUtilization containersUtilization;
+
   public ContainersMonitorImpl(ContainerExecutor exec,
       AsyncDispatcher dispatcher, Context context) {
     super("containers-monitor");
@@ -89,16 +92,22 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.containersToBeAdded = new HashMap<ContainerId, ProcessTreeInfo>();
     this.containersToBeRemoved = new ArrayList<ContainerId>();
     this.monitoringThread = new MonitoringThread();
+
+    this.containersUtilization = ResourceUtilization.newInstance(0, 0, 0.0f);
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.monitoringInterval =
         conf.getLong(YarnConfiguration.NM_CONTAINER_MON_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_NM_CONTAINER_MON_INTERVAL_MS);
+                conf.getLong(YarnConfiguration.NM_RESOURCE_MON_INTERVAL_MS,
+                        YarnConfiguration.DEFAULT_NM_RESOURCE_MON_INTERVAL_MS));
 
     Class<? extends ResourceCalculatorPlugin> clazz =
-        conf.getClass(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR, null,
+            conf.getClass(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
+                    conf.getClass(
+                            YarnConfiguration.NM_MON_RESOURCE_CALCULATOR, null,
+                            ResourceCalculatorPlugin.class),
             ResourceCalculatorPlugin.class);
     this.resourceCalculatorPlugin =
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(clazz, conf);
@@ -387,6 +396,11 @@ public class ContainersMonitorImpl extends AbstractService implements
           containersToBeRemoved.clear();
         }
 
+        // Temporary structure to calculate the total resource utilization of
+        // the containers
+        ResourceUtilization trackedContainersUtilization  =
+                ResourceUtilization.newInstance(0, 0, 0.0f);
+
         // Now do the monitoring for the trackingContainers
         // Check memory usage and kill any overflowing containers
         long vmemStillInUsage = 0;
@@ -461,6 +475,12 @@ public class ContainersMonitorImpl extends AbstractService implements
                 formatUsageString(
                     currentVmemUsage, vmemLimit, currentPmemUsage, pmemLimit));
 
+            // Add resource utilization for this container
+            trackedContainersUtilization.addTo(
+                    (int) (currentPmemUsage >> 20),
+                    (int) (currentVmemUsage >> 20),
+                    milliVcoresUsed / 1000.0f); //TODO: check this value unit
+
             // Add usage to container metrics
             if (containerMetricsEnabled) {
               ContainerMetrics.forContainer(
@@ -531,6 +551,9 @@ public class ContainersMonitorImpl extends AbstractService implements
           }
         }
 
+        // Save the aggregated utilization of the containers
+        setContainersUtilization(trackedContainersUtilization);
+
         try {
           Thread.sleep(monitoringInterval);
         } catch (InterruptedException e) {
@@ -600,6 +623,15 @@ public class ContainersMonitorImpl extends AbstractService implements
   @Override
   public boolean isVmemCheckEnabled() {
     return this.vmemCheckEnabled;
+  }
+
+  @Override
+  public ResourceUtilization getContainersUtilization() {
+    return this.containersUtilization;
+  }
+
+  public void setContainersUtilization(ResourceUtilization utilization) {
+    this.containersUtilization = utilization;
   }
 
   @Override
