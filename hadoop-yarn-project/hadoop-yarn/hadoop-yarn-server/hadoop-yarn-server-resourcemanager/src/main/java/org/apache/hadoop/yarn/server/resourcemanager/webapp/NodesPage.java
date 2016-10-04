@@ -76,8 +76,11 @@ class NodesPage extends RmView {
               .th(".containers", "Containers")
               .th(".mem", "Mem Used")
               .th(".mem", "Mem Avail")
+              .th(".mem", "Mem Overcommit")
               .th(".vcores", "VCores Used")
               .th(".vcores", "VCores Avail")
+              .th(".vcores", "VCores Overcommit")
+              .th(".preempt", "Overcommit Preemptions")
               .th(".nodeManagerVersion", "Version")._()._().tbody();
       NodeState stateFilter = null;
       if (type != null && !type.isEmpty()) {
@@ -125,6 +128,7 @@ class NodesPage extends RmView {
         NodeInfo info = new NodeInfo(ni, sched);
         int usedMemory = (int) info.getUsedMemory();
         int availableMemory = (int) info.getAvailableMemory();
+        int overcommitMemory = (int) info.getOvercommittedMemory();
         TR<TBODY<TABLE<Hamlet>>> row =
             tbody.tr().td(StringUtils.join(",", info.getNodeLabels()))
                 .td(info.getRack()).td(info.getState()).td(info.getNodeId());
@@ -141,9 +145,13 @@ class NodesPage extends RmView {
             .$title(String.valueOf(usedMemory))._()
             ._(StringUtils.byteDesc(usedMemory * BYTES_IN_MB))._().td().br()
             .$title(String.valueOf(availableMemory))._()
-            ._(StringUtils.byteDesc(availableMemory * BYTES_IN_MB))._()
+            ._(StringUtils.byteDesc(availableMemory * BYTES_IN_MB))._().td().br()
+            .$title(String.valueOf(overcommitMemory))._()
+            ._(StringUtils.byteDesc(overcommitMemory * BYTES_IN_MB))._()
             .td(String.valueOf(info.getUsedVirtualCores()))
             .td(String.valueOf(info.getAvailableVirtualCores()))
+            .td(String.valueOf(info.getOvercommittedVirtualCores()))
+            .td(String.valueOf(info.getOvercommitPreemptions()))
             .td(ni.getNodeManagerVersion())._();
       }
       tbody._()._();
@@ -174,7 +182,7 @@ class NodesPage extends RmView {
     StringBuilder b = tableInit().append(", aoColumnDefs: [");
     b.append("{'bSearchable': false, 'aTargets': [ 7 ]}");
     b.append(", {'sType': 'title-numeric', 'bSearchable': false, "
-        + "'aTargets': [ 8, 9 ] }");
+        + "'aTargets': [ 8, 9, 10 ] }");
     b.append(", {'sType': 'title-numeric', 'aTargets': [ 5 ]}");
     b.append("]}");
     return b.toString();

@@ -1603,7 +1603,7 @@ public class LeafQueue extends AbstractCSQueue {
         } else {
           removed =
             application.containerCompleted(rmContainer, containerStatus, event);
-          node.releaseContainer(container);
+          node.releaseContainer(rmContainer.getContainerId(), false);
         }
 
         // Book-keeping
@@ -1716,6 +1716,12 @@ public class LeafQueue extends AbstractCSQueue {
             Resources.none(), null);
       }
     }
+  }
+
+  @Override
+  public synchronized void adjustClusterResource(Resource clusterResource) {
+    lastClusterResource = clusterResource;
+    updateAbsoluteCapacityResource(clusterResource);
   }
 
   @VisibleForTesting

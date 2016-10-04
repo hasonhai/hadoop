@@ -29,6 +29,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import com.google.common.annotations.VisibleForTesting;
@@ -46,6 +47,12 @@ public class ClusterMetrics {
   @Metric("# of Rebooted NMs") MutableGaugeInt numRebootedNMs;
   @Metric("AM container launch delay") MutableRate aMLaunchDelay;
   @Metric("AM register delay") MutableRate aMRegisterDelay;
+  @Metric("Overcommit memory") MutableGaugeInt overcommitMB;
+  @Metric("Overcommit virtual cores") MutableGaugeInt overcommitVirtualCores;
+  @Metric("Overcommit Milliseconds Preempted") MutableCounterLong overcommitMsLost;
+  @Metric("Overcommit preemptions") MutableGaugeInt overcommitPreemptions;
+  @Metric("Overcommit MB-Sec Preempted") MutableCounterLong overcommitMbSecLost;
+  @Metric("Overcommit Vcore-Sec Preempted") MutableCounterLong overcommitVcoreSecLost;
 
   private static final MetricsInfo RECORD_INFO = info("ClusterMetrics",
   "Metrics for the Yarn Cluster");
@@ -158,4 +165,51 @@ public class ClusterMetrics {
     aMRegisterDelay.add(delay);
   }
 
+  public int getOvercommitMB() {
+    return overcommitMB.value();
+  }
+
+  public void incrOvercommitMB(int delta) {
+    overcommitMB.incr(delta);
+  }
+
+  public void decrOvercommitMB(int delta) {
+    overcommitMB.decr(delta);
+  }
+
+  public int getOvercommitVirtualCores() {
+    return overcommitVirtualCores.value();
+  }
+
+  public void incrOvercommitVirtualCores(int delta) {
+    overcommitVirtualCores.incr(delta);
+  }
+
+  public void decrOvercommitVirtualCores(int delta) {
+    overcommitVirtualCores.decr(delta);
+  }
+
+  public int getOvercommitPreemptions() {
+    return overcommitPreemptions.value();
+  }
+
+  public void incrOvercommitPreemptions() {
+    overcommitPreemptions.incr();
+  }
+
+  public long getOvercommitMsLost() {
+    return overcommitMsLost.value();
+  }
+
+  public void incrOvercommitMsLost(long delta) {
+    overcommitMsLost.incr(delta);
+  }
+
+  public void incrOvercommitMbSecLost(long delta) {
+    overcommitMbSecLost.incr(delta);
+  }
+
+  public void incrOvercommitVcoreSecLost(long delta) {
+    overcommitVcoreSecLost.incr(delta);
+  }
 }

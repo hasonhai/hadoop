@@ -132,6 +132,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   private NodeHeartbeatResponse latestNodeHeartBeatResponse = recordFactory
       .newRecordInstance(NodeHeartbeatResponse.class);
+
+  private static volatile RMNodeOvercommitConfiguration overcommitConfig = null;
   
   private static final StateMachineFactory<RMNodeImpl,
                                            NodeState,
@@ -250,7 +252,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     this.stateMachine = stateMachineFactory.make(this);
     
-    this.nodeUpdateQueue = new ConcurrentLinkedQueue<UpdatedContainerInfo>();  
+    this.nodeUpdateQueue = new ConcurrentLinkedQueue<UpdatedContainerInfo>();
+
+    if (overcommitConfig == null && context.getYarnConfiguration() != null) {
+      synchronized (getClass()) {
+        if (overcommitConfig == null) {
+          overcommitConfig = new RMNodeOvercommitConfiguration(
+                  context.getYarnConfiguration());
+        }
+      }
+    }
   }
 
   @Override
@@ -794,7 +805,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
 
-      // Switch the last heartbeatresponse.
+      // Switch the last heartbeat response.
       rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
 
       NodeHealthStatus remoteNodeHealthStatus = 
@@ -884,6 +895,17 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
     this.nextHeartBeat = true;
     return latestContainerInfoList;
+  }
+
+  @Override
+  public RMNodeOvercommitConfiguration getOvercommitConfiguration() {
+    return overcommitConfig;
+  }
+
+  public static synchronized RMNodeOvercommitConfiguration
+  refreshOvercommitConfiguration(Configuration conf) {
+    overcommitConfig = new RMNodeOvercommitConfiguration(conf);
+    return overcommitConfig;
   }
 
   @VisibleForTesting

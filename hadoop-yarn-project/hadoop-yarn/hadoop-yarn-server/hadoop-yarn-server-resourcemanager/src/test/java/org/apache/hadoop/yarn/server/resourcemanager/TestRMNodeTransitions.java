@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
@@ -475,8 +476,9 @@ public class TestRMNodeTransitions {
     RMNodeImpl node = getRunningNode();
     NodeHealthStatus status = NodeHealthStatus.newInstance(false, "sick",
         System.currentTimeMillis());
-    node.handle(new RMNodeStatusEvent(node.getNodeID(), status,
-        new ArrayList<ContainerStatus>(), null, null));
+    NodeStatus nodeStatus = NodeStatus.newInstance(node.getNodeID(), 0,
+            new ArrayList<ContainerStatus>(), null, status, null, null);
+    node.handle(new RMNodeStatusEvent(node.getNodeID(), nodeStatus, null));
     Assert.assertEquals(NodeState.UNHEALTHY, node.getState());
     return node;
   }

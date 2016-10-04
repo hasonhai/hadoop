@@ -194,6 +194,32 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
       false;
 
+  /** Configuration for Over-commit
+   */
+  public static final String RM_OVERCOMMIT_PREFIX =
+          RM_PREFIX + "scheduler.overcommit.";
+
+  public static final String RM_OVERCOMMIT_ENABLED =
+          RM_OVERCOMMIT_PREFIX + "enabled";
+  public static final boolean DEFAULT_RM_OVERCOMMIT_ENABLED = false;
+
+  /** The minimum period of time, in milliseconds, between overcommit
+   * commits for a node.  A value <= 0 will disable the increment period.
+   */
+  public static final String RM_OVERCOMMIT_INCREMENT_PERIOD_MSEC =
+          RM_OVERCOMMIT_PREFIX + "increment-period-ms";
+  public static final int DEFAULT_RM_OVERCOMMIT_INCREMENT_PERIOD_MSEC = 3000;
+
+  /** Controls whether containers starting or completing on the node affect
+   * the increment period. If enabled then container churn on the node will
+   * override the minimum increment period delay.
+   */
+  public static final String RM_OVERCOMMIT_CONTAINER_CHANGE_ALLOWS_INCREMENT =
+          RM_OVERCOMMIT_PREFIX + "container-change-allows-increment";
+  public static final boolean
+      DEFAULT_RM_OVERCOMMIT_CONTAINER_CHANGE_ALLOWS_INCREMENT = true;
+
+
   /** Enable Resource Manager webapp ui actions */
   public static final String RM_WEBAPP_UI_ACTIONS_ENABLED =
     RM_PREFIX + "webapp.ui-actions.enabled";

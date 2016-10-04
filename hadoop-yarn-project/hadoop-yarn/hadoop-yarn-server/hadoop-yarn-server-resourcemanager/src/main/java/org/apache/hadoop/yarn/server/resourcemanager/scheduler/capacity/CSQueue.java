@@ -236,7 +236,9 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    */
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits resourceLimits);
-  
+
+  public void adjustClusterResource(Resource clusterResource);
+
   /**
    * Get the {@link ActiveUsersManager} for the queue.
    * @return the <code>ActiveUsersManager</code> for the queue

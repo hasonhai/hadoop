@@ -615,6 +615,14 @@ public class ParentQueue extends AbstractCSQueue {
     CSQueueUtils.updateQueueStatistics(
         resourceCalculator, this, parent, clusterResource, minimumAllocation);
   }
+
+  @Override
+  public synchronized void adjustClusterResource(Resource clusterResource) {
+    // Update all children
+    for (CSQueue childQueue : childQueues) {
+      childQueue.adjustClusterResource(clusterResource);
+    }
+  }
   
   @Override
   public synchronized List<CSQueue> getChildQueues() {

@@ -819,7 +819,7 @@ public class FairScheduler extends
       application.unreserve(rmContainer.getReservedPriority(), node);
     } else {
       application.containerCompleted(rmContainer, containerStatus, event);
-      node.releaseContainer(container);
+      node.releaseContainer(rmContainer.getContainerId(), true);
       updateRootQueueMetrics();
     }
 
@@ -983,6 +983,11 @@ public class FairScheduler extends
     } else {
       attemptScheduling(node);
     }
+
+    // Updating node resource utilization
+    node.setAggregatedContainersUtilization(
+            nm.getAggregatedContainersUtilization());
+    node.setNodeUtilization(nm.getNodeUtilization());
 
     long duration = getClock().getTime() - start;
     fsOpDurations.addNodeUpdateDuration(duration);

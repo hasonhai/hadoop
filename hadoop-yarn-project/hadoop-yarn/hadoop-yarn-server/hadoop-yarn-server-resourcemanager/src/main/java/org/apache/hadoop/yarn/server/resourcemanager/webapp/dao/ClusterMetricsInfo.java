@@ -40,10 +40,12 @@ public class ClusterMetricsInfo {
   protected long reservedMB;
   protected long availableMB;
   protected long allocatedMB;
+  protected int overcommitMB;
 
   protected long reservedVirtualCores;
   protected long availableVirtualCores;
   protected long allocatedVirtualCores;
+  protected int overcommitVirtualCores;
 
   protected int containersAllocated;
   protected int containersReserved;
@@ -57,6 +59,8 @@ public class ClusterMetricsInfo {
   protected int decommissionedNodes;
   protected int rebootedNodes;
   protected int activeNodes;
+
+  protected int overcommitPreemptions;
 
   public ClusterMetricsInfo() {
   } // JAXB needs this
@@ -76,10 +80,14 @@ public class ClusterMetricsInfo {
     this.reservedMB = metrics.getReservedMB();
     this.availableMB = metrics.getAvailableMB();
     this.allocatedMB = metrics.getAllocatedMB();
+    this.overcommitMB = clusterMetrics.getOvercommitMB();
 
     this.reservedVirtualCores = metrics.getReservedVirtualCores();
     this.availableVirtualCores = metrics.getAvailableVirtualCores();
     this.allocatedVirtualCores = metrics.getAllocatedVirtualCores();
+    this.overcommitVirtualCores = clusterMetrics.getOvercommitVirtualCores();
+
+    this.overcommitPreemptions = clusterMetrics.getOvercommitPreemptions();
 
     this.containersAllocated = metrics.getAllocatedContainers();
     this.containersPending = metrics.getPendingContainers();
@@ -132,6 +140,10 @@ public class ClusterMetricsInfo {
     return this.allocatedMB;
   }
 
+  public int getOvercommitMB() {
+    return this.overcommitMB;
+  }
+
   public long getReservedVirtualCores() {
     return this.reservedVirtualCores;
   }
@@ -142,6 +154,10 @@ public class ClusterMetricsInfo {
 
   public long getAllocatedVirtualCores() {
     return this.allocatedVirtualCores;
+  }
+
+  public int getOvercommitVirtualCores() {
+    return this.overcommitVirtualCores;
   }
 
   public int getContainersAllocated() {
@@ -186,6 +202,10 @@ public class ClusterMetricsInfo {
 
   public int getDecommissionedNodes() {
     return this.decommissionedNodes;
+  }
+
+  public int getOvercommitPreemptions() {
+    return this.overcommitPreemptions;
   }
 
 }

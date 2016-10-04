@@ -155,4 +155,6 @@ public interface RMNode {
    * @return labels in this node
    */
   public Set<String> getNodeLabels();
+
+  public RMNodeOvercommitConfiguration getOvercommitConfiguration();
 }

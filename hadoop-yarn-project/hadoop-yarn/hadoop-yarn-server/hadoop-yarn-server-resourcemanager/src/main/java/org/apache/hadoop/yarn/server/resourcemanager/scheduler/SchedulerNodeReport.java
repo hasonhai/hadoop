@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * Node usage report.
@@ -30,11 +31,15 @@ import org.apache.hadoop.yarn.api.records.Resource;
 public class SchedulerNodeReport {
   private final Resource used;
   private final Resource avail;
+  private final Resource overcommit;
+  private final long overcommitPreemptions;
   private final int num;
   
   public SchedulerNodeReport(SchedulerNode node) {
     this.used = node.getUsedResource();
     this.avail = node.getAvailableResource();
+    this.overcommit = node.getOvercommittedResource();
+    this.overcommitPreemptions = node.getOvercommitPreemptions();
     this.num = node.getNumContainers();
   }
   
@@ -50,6 +55,20 @@ public class SchedulerNodeReport {
    */
   public Resource getAvailableResource() {
     return avail;
+  }
+
+  /**
+   * @return the amount of resources currently overcommitted on the node
+   */
+  public Resource getOvercommittedResource() {
+    return overcommit;
+  }
+
+  /**
+   * @return the number of preemptions due to overcommit on this node
+   */
+  public long getOvercommitPreemptions() {
+    return overcommitPreemptions;
   }
 
   /**

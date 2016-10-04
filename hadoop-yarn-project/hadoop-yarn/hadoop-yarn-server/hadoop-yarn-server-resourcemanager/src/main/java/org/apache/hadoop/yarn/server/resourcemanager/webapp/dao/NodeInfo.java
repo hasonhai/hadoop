@@ -47,8 +47,11 @@ public class NodeInfo {
   protected int numContainers;
   protected long usedMemoryMB;
   protected long availMemoryMB;
+  protected long overcommittedMemoryMB;
   protected long usedVirtualCores;
   protected long availableVirtualCores;
+  protected long overcommittedVirtualCores;
+  protected long overcommitPreemptions;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
 
   public NodeInfo() {
@@ -64,8 +67,13 @@ public class NodeInfo {
       this.numContainers = report.getNumContainers();
       this.usedMemoryMB = report.getUsedResource().getMemory();
       this.availMemoryMB = report.getAvailableResource().getMemory();
+      this.overcommittedMemoryMB =
+              report.getOvercommittedResource().getMemory();
       this.usedVirtualCores = report.getUsedResource().getVirtualCores();
       this.availableVirtualCores = report.getAvailableResource().getVirtualCores();
+      this.overcommittedVirtualCores =
+              report.getOvercommittedResource().getVirtualCores();
+      this.overcommitPreemptions = report.getOvercommitPreemptions();
     }
     this.id = id.toString();
     this.rack = ni.getRackName();
@@ -128,12 +136,24 @@ public class NodeInfo {
     return this.availMemoryMB;
   }
 
+  public long getOvercommittedMemory() {
+    return this.overcommittedMemoryMB;
+  }
+
   public long getUsedVirtualCores() {
     return this.usedVirtualCores;
   }
 
   public long getAvailableVirtualCores() {
     return this.availableVirtualCores;
+  }
+
+  public long getOvercommittedVirtualCores() {
+    return this.overcommittedVirtualCores;
+  }
+
+  public long getOvercommitPreemptions() {
+    return this.overcommitPreemptions;
   }
 
   public ArrayList<String> getNodeLabels() {

@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -91,6 +92,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueNotFoundExce
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QueueMapping.MappingType;
@@ -359,6 +361,7 @@ public class CapacityScheduler extends
     validateConf(this.conf);
     try {
       LOG.info("Re-initializing queues...");
+      refreshOvercommit(new YarnConfiguration());
       refreshMaximumAllocation(this.conf.getMaximumAllocation());
       reinitializeQueues(this.conf);
     } catch (Throwable t) {
@@ -976,9 +979,36 @@ public class CapacityScheduler extends
     // Process completed containers
     for (ContainerStatus completedContainer : completedContainers) {
       ContainerId containerId = completedContainer.getContainerId();
+      RMContainer container = getRMContainer(containerId);
       LOG.debug("Container FINISHED: " + containerId);
-      completedContainer(getRMContainer(containerId), 
-          completedContainer, RMContainerEventType.FINISHED);
+      completedContainer(container, completedContainer,
+              RMContainerEventType.FINISHED);
+      node.releaseContainer(containerId, true);
+      if (completedContainer.getExitStatus() == ContainerExitStatus.PREEMPTED) {
+        node.incrOvercommitPreemptions();
+        ClusterMetrics cMetrics = ClusterMetrics.getMetrics();
+        cMetrics.incrOvercommitPreemptions();
+        // Update lost work metrics due to Preemptions
+        // It's possible NM preempted container but RM has already forgotten
+        // about it. In that case we can't calculate amount of lost work.
+        if (container != null) {
+          long delta = System.currentTimeMillis() - container.getCreationTime();
+          Resource resource = container.getContainer().getResource();
+          cMetrics.incrOvercommitMsLost(delta);
+          cMetrics.incrOvercommitMbSecLost(resource.getMemory() * delta / 1000);
+          cMetrics.incrOvercommitVcoreSecLost(
+                  resource.getVirtualCores() * delta / 1000);
+        }
+      }
+    }
+
+    // Updating node resource utilization
+    node.setAggregatedContainersUtilization(
+            nm.getAggregatedContainersUtilization());
+    node.setNodeUtilization(nm.getNodeUtilization());
+
+    if (nm.getOvercommitConfiguration().getEnabled()) {
+      processOvercommit(node, node.getTotalResource());
     }
 
     // Now node data structures are upto date and ready for scheduling.
@@ -986,6 +1016,16 @@ public class CapacityScheduler extends
       LOG.debug("Node being looked for scheduling " + nm
         + " availableResource: " + node.getAvailableResource());
     }
+  }
+
+  @Override
+  protected synchronized boolean processOvercommit(SchedulerNode node,
+      Resource oldResource) {
+    if (super.processOvercommit(node, oldResource)) {
+      root.adjustClusterResource(clusterResource);
+      return true;
+    }
+    return false;
   }
   
   /**
@@ -1260,6 +1300,14 @@ public class CapacityScheduler extends
     if (scheduleAsynchronously && numNodes == 0) {
       asyncSchedulerThread.suspendSchedule();
     }
+
+    Resource overcommitResource = node.getTotalResource();
+    Resource nodeResource = node.getNodeTotalResource();
+    ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
+    clusterMetrics.decrOvercommitMB(
+            overcommitResource.getMemory() - nodeResource.getMemory());
+    clusterMetrics.decrOvercommitVirtualCores(
+            overcommitResource.getVirtualCores() - nodeResource.getVirtualCores());
     
     // Remove running containers
     List<RMContainer> runningContainers = node.getRunningContainers();

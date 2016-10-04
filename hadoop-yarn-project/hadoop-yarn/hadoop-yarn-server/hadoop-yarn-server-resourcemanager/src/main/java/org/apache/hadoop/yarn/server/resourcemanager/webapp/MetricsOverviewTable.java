@@ -165,6 +165,9 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default")._("Scheduling Resource Type")._().
         th().$class("ui-state-default")._("Minimum Allocation")._().
         th().$class("ui-state-default")._("Maximum Allocation")._().
+        th().$class("ui-state-default")._("Overcommit Memory")._().
+        th().$class("ui-state-default")._("Overcommit VCores")._().
+        th().$class("ui-state-default")._("Overcommit Preempts")._().
       _().
     _().
     tbody().$class("ui-widget-content").
@@ -173,6 +176,9 @@ public class MetricsOverviewTable extends HtmlBlock {
         td(String.valueOf(schedulerInfo.getSchedulerResourceTypes())).
         td(schedulerInfo.getMinAllocation().toString()).
         td(schedulerInfo.getMaxAllocation().toString()).
+        td(StringUtils.byteDesc(clusterMetrics.getOvercommitMB() * BYTES_IN_MB)).
+        td(String.valueOf(clusterMetrics.getOvercommitVirtualCores())).
+        td(String.valueOf(clusterMetrics.getOvercommitPreemptions())).
       _().
     _()._();
 

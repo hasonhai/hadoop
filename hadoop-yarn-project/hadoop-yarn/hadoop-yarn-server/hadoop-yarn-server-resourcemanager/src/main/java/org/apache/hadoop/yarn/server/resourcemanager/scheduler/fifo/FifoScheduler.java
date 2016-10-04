@@ -719,6 +719,10 @@ public class FifoScheduler extends
           completedContainer, RMContainerEventType.FINISHED);
     }
 
+    // Updating node resource utilization
+    node.setAggregatedContainersUtilization(
+            rmNode.getAggregatedContainersUtilization());
+    node.setNodeUtilization(rmNode.getNodeUtilization());
 
     if (rmContext.isWorkPreservingRecoveryEnabled()
         && !rmContext.isSchedulerReadyForAllocatingContainers()) {
@@ -873,7 +877,7 @@ public class FifoScheduler extends
     application.containerCompleted(rmContainer, containerStatus, event);
 
     // Inform the node
-    node.releaseContainer(container);
+    node.releaseContainer(rmContainer.getContainerId(), true);
     
     // Update total usage
     Resources.subtractFrom(usedResource, container.getResource());

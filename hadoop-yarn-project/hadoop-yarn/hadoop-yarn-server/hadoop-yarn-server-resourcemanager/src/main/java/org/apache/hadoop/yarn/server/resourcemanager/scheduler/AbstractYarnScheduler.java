@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -61,6 +62,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeOvercommitConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.util.concurrent.SettableFuture;
@@ -212,6 +215,7 @@ public abstract class AbstractYarnScheduler
     }
 
     application.containerLaunchedOnNode(containerId, node.getNodeID());
+    node.containerStarted(containerId);
   }
 
   public T getApplicationAttempt(ApplicationAttemptId applicationAttemptId) {
@@ -547,6 +551,9 @@ public abstract class AbstractYarnScheduler
     Resource newResource = resourceOption.getResource();
     Resource oldResource = node.getTotalResource();
     if(!oldResource.equals(newResource)) {
+      // Notify NodeLabelsManager about this change
+      rmContext.getNodeLabelManager().updateNodeResource(nm.getNodeID(),
+              newResource);
       // Log resource change
       LOG.info("Update resource on node: " + node.getNodeName()
           + " from: " + oldResource + ", to: "
@@ -568,6 +575,50 @@ public abstract class AbstractYarnScheduler
       // Log resource change
       LOG.warn("Update resource on node: " + node.getNodeName() 
           + " with the same resource: " + newResource);
+    }
+  }
+
+  protected synchronized boolean processOvercommit(SchedulerNode node,
+      Resource oldResource) {
+    Resource newResource = node.calculateOvercommit(
+            getMinimumResourceCapability());
+    if (oldResource.equals(newResource)) {
+      return false;
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Overcommit: update node: " + node.getNodeName()
+              + " from: " + oldResource + " to: " + newResource);
+    }
+    // Notify NodeLabelsManager about this change
+    rmContext.getNodeLabelManager().adjustNodeResource(node.getNodeID(),
+            newResource);
+    node.setOvercommitTotalResource(newResource);
+    Resources.subtractFrom(clusterResource, oldResource);
+    Resources.addTo(clusterResource, newResource);
+    ClusterMetrics metrics = ClusterMetrics.getMetrics();
+    metrics.incrOvercommitMB(
+            newResource.getMemory() - oldResource.getMemory());
+    metrics.incrOvercommitVirtualCores(
+            newResource.getVirtualCores() - oldResource.getVirtualCores());
+    return true;
+  }
+
+  protected synchronized void refreshOvercommit(Configuration conf) {
+    boolean oldEnable = false;
+    try {
+      oldEnable = nodes.values().iterator().next().getRMNode()
+              .getOvercommitConfiguration().getEnabled();
+    } catch (NoSuchElementException e) {
+    }
+    RMNodeOvercommitConfiguration overcommitConfig =
+            RMNodeImpl.refreshOvercommitConfiguration(conf);
+    if (oldEnable && oldEnable != overcommitConfig.getEnabled()) {
+      // update overcommit on all the nodes to restore original node size
+      for (SchedulerNode node : nodes.values()) {
+        Resource oldResource = node.getTotalResource();
+        node.setOvercommitTotalResource(node.getNodeTotalResource());
+        processOvercommit(node, oldResource);
+      }
     }
   }
 
