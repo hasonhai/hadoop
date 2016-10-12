@@ -190,6 +190,8 @@ public abstract class SchedulerNode {
      boolean launchedOnNode) {
     Container container = rmContainer.getContainer();
     deductAvailableResource(container.getResource());
+    //TODO: add estimated resource to container
+    increaseEstimatedResource(container.getResource());
     ++numContainers;
 
     launchedContainers.put(container.getId(),
@@ -411,7 +413,12 @@ public abstract class SchedulerNode {
    * @param nodeUtilization Resource utilization of the node.
    */
   public void setNodeUtilization(ResourceUtilization nodeUtilization) {
-    this.nodeUtilization = nodeUtilization;
+    if (rmNode.getOvercommitConfiguration().isEstimationAtResourceManager()) {
+      this.nodeUtilization = CalculateEstimatedResource(nodeUtilization);
+    }
+    else {
+      this.nodeUtilization = nodeUtilization;
+    }
   }
 
   /**
@@ -420,6 +427,70 @@ public abstract class SchedulerNode {
    */
   public ResourceUtilization getNodeUtilization() {
     return this.nodeUtilization;
+  }
+
+  //TODO:  maybe we need "synchronized" keyword here
+  public ResourceUtilization CalculateEstimatedResource( ResourceUtilization curRealUtilization) {
+
+    float realUsageWeight = rmNode.getOvercommitConfiguration().getRealUsageWeight();
+
+    if (this.nodeUtilization != null) {
+      //TODO: lock nodeUtilization object
+      int newEstimatedMem = Math.round(this.nodeUtilization.getPhysicalMemory() * (1 - realUsageWeight)
+              + curRealUtilization.getPhysicalMemory() * realUsageWeight);
+      float newEstimatedCPU = this.nodeUtilization.getCPU() * (1 - realUsageWeight)
+              + curRealUtilization.getCPU() * realUsageWeight;
+
+      ResourceUtilization newEstimatedResource =
+              ResourceUtilization.newInstance(newEstimatedMem, newEstimatedMem, newEstimatedCPU);
+
+      LOG.info("Current Resource Estimation: "
+              + "NodeMem = " + curRealUtilization.getPhysicalMemory() + " MBs, "
+              + "NodeCPU = " + curRealUtilization.getCPU() + " %, "
+              + "NodeEMem = " + newEstimatedMem + " MBs, "
+              + "NodeECPU = " + newEstimatedCPU + " %.");
+
+      return newEstimatedResource;
+      //TODO: unlock nodeUtilization object
+    }
+    else {
+      return curRealUtilization;
+    }
+  }
+
+  //TODO: Concurrency should be considered deeply here
+  /**
+   * Update estimated resource when there is new container allocated to node.
+   * This function is called by allocateContainer(), it may happen at the same with the setNodeUtilization
+   * @param containerResource
+   */
+  public void increaseEstimatedResource( Resource containerResource) {
+
+    //Update Memory
+    int newEstimatedMem = this.nodeUtilization.getPhysicalMemory() + containerResource.getMemory();
+    //Update CPU. Currently we don't have actual number of core, so we use vCores instead
+    float newEstimatedCPU = this.nodeUtilization.getCPU() +
+            ((float) containerResource.getVirtualCores()/rmNode.getTotalCapability().getVirtualCores());
+    ResourceUtilization newEstimatedResource =
+             ResourceUtilization.newInstance(newEstimatedMem, newEstimatedMem, newEstimatedCPU);
+
+    this.nodeUtilization = newEstimatedResource;
+
+    LOG.info("Increase estimation (Mem= " + containerResource.getMemory() + " MBs,"
+            + " CPU= " + containerResource.getVirtualCores() + " vCores)"
+            + " for Resource Usage at Node " + rmNode.getNodeID()
+            + ": eMem " + newEstimatedMem + " MBs,"
+            + " eCPU " + newEstimatedCPU + " %");
+  }
+
+  /**
+   * Reduce Estimated Resource after Container finished
+   * @param Mem (MBs)
+   * @param CPU (number of vcores)
+   * @param containerDuration (ms)
+   */
+  public void reduceEstimationResource( int Mem, int CPU, int containerDuration ) {
+    //TODO
   }
 
   /**
@@ -458,15 +529,17 @@ public abstract class SchedulerNode {
       }
       float memUtilization = (float)nodeUtilization.getPhysicalMemory()
               / (float)nodeTotalResourceCapability.getMemory();
-      float memFactor = getOvercommitFactor(memUtilization);
-      int desiredMemTotal = Math.round(newTotal.getMemory() * memFactor);
+      //float memFactor = getOvercommitFactor(memUtilization);
+      //int desiredMemTotal = Math.round(newTotal.getMemory() * memFactor);
+      int desiredMemTotal = usedResource.getMemory()
+              + Math.round(newTotal.getMemory() * (1 - memUtilization));
 
       Resource rsrv = (reservedContainer != null)
               ? reservedContainer.getReservedResource() : Resources.none();
 
       // cap overcommit increase by the specified increment or the reservation
-      int memCap = usedResource.getMemory() + rsrv.getMemory();
-      desiredMemTotal = Math.min(desiredMemTotal, memCap);
+      int memRsrv = usedResource.getMemory() + rsrv.getMemory();
+      desiredMemTotal = Math.max(desiredMemTotal, memRsrv);
 
       // TODO. In 2.7 getCPU() returns 0-100 representing a percentage of
       // total CPU used on the node. In 2.8 this returns number of cores.
@@ -474,11 +547,13 @@ public abstract class SchedulerNode {
       // because we don't know the vcore:core ratio. So, for now we assume
       // 2.7 behavior.
       float vcoreUtilization = nodeUtilization.getCPU() / 100.0f;
-      float vcoreFactor = getOvercommitFactor(vcoreUtilization);
-      int desiredVcoreTotal = Math.round(
-              newTotal.getVirtualCores() * vcoreFactor);
-      int vcoreCap = usedResource.getVirtualCores() + rsrv.getVirtualCores();
-      desiredVcoreTotal = Math.min(desiredVcoreTotal, vcoreCap);
+      //float vcoreFactor = getOvercommitFactor(vcoreUtilization);
+      //int desiredVcoreTotal = Math.round(
+      //        newTotal.getVirtualCores() * vcoreFactor);
+      int desiredVcoreTotal = usedResource.getVirtualCores()
+              + Math.round(newTotal.getVirtualCores() * (1 - vcoreUtilization)); //available cores
+      int vcoreRsrv = usedResource.getVirtualCores() + rsrv.getVirtualCores();
+      desiredVcoreTotal = Math.max(desiredVcoreTotal, vcoreRsrv);
 
       // round down to min alloc
       int newMemTotal = ResourceCalculator.roundDown(desiredMemTotal,
@@ -510,13 +585,11 @@ public abstract class SchedulerNode {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Overcommit for " + rmNode.getNodeAddress()
                 + " memUtil=" + memUtilization
-                + " memFactor=" + memFactor
                 + " rsrvMem=" + rsrv.getMemory()
                 + " desiredMemTotal=" + desiredMemTotal
                 + " oldMemTotal=" + oldMemTotal
                 + " newMemTotal=" + newMemTotal
                 + " vcoreUtil=" + vcoreUtilization
-                + " vcoreFactor=" + vcoreFactor
                 + " rsrvVcore=" + rsrv.getVirtualCores()
                 + " desiredVcoreTotal=" + desiredVcoreTotal
                 + " oldVcoreTotal=" + oldVcoreTotal
@@ -526,10 +599,6 @@ public abstract class SchedulerNode {
       newTotal = Resource.newInstance(newMemTotal, newVcoreTotal);
     }
     return newTotal;
-  }
-
-  private float getOvercommitFactor(float utilization) {
-    return 2.0f - utilization; // 1.0f + (1.0f - utilization)
   }
 
   private static class ContainerInfo {

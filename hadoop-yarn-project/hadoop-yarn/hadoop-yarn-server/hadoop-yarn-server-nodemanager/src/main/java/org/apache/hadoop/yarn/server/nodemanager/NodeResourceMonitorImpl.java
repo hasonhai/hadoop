@@ -275,11 +275,13 @@ public class NodeResourceMonitorImpl extends AbstractService implements
      * @param cCpu: number of core container request
      */
     public void registerNewDemandForEstimatedUtilization(int cMem, int cCpu) {
-        int nCores = resourceCalculatorPlugin.getNumProcessors();
-        float pCpu = (((float) cCpu) / nCores) * 100; // in percent of node
-        this.eMemAddedUp += cMem;
-        this.eCPUAddedUp += pCpu;
-        LOG.info("Registering demand to estimation: Cmem:" + cMem + "MB, pCPU: " + pCpu + "%.");
+        if (isEstimationEnabled()) {
+            int nCores = resourceCalculatorPlugin.getNumProcessors();
+            float pCpu = (((float) cCpu) / nCores) * 100; // in percent of node
+            this.eMemAddedUp += cMem;
+            this.eCPUAddedUp += pCpu;
+            LOG.info("Registering demand to estimation: Cmem:" + cMem + "MB, pCPU: " + pCpu + "%.");
+        }
     }
 
     public boolean isEstimationEnabled() {

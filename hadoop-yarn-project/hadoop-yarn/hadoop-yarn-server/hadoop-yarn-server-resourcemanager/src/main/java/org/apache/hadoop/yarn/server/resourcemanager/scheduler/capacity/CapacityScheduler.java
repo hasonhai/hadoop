@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
+import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -1002,9 +1003,11 @@ public class CapacityScheduler extends
       }
     }
 
-    // Updating node resource utilization
+    // Updating aggregated containers utilization
     node.setAggregatedContainersUtilization(
             nm.getAggregatedContainersUtilization());
+
+    // Update Node Utilization or Node Estimated Utilization
     node.setNodeUtilization(nm.getNodeUtilization());
 
     if (nm.getOvercommitConfiguration().getEnabled()) {

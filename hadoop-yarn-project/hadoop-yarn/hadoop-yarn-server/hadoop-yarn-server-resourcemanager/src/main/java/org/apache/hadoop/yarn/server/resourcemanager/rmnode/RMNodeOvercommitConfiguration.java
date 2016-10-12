@@ -11,6 +11,7 @@ public class RMNodeOvercommitConfiguration {
     private boolean enabled;
     private long incrementPeriodMsec;
     private boolean containerChangeAllowsIncrement;
+    private float realUsageWeight;
 
     public RMNodeOvercommitConfiguration(Configuration conf) {
         enabled = conf.getBoolean(YarnConfiguration.RM_OVERCOMMIT_ENABLED,
@@ -25,9 +26,14 @@ public class RMNodeOvercommitConfiguration {
                 YarnConfiguration.RM_OVERCOMMIT_CONTAINER_CHANGE_ALLOWS_INCREMENT,
                 YarnConfiguration.DEFAULT_RM_OVERCOMMIT_CONTAINER_CHANGE_ALLOWS_INCREMENT);
 
+        realUsageWeight = getConfFloat(conf,
+                YarnConfiguration.RM_OVERCOMMIT_REAL_USAGE_WEIGHT,
+                YarnConfiguration.DEFAULT_RM_OVERCOMMIT_REAL_USAGE_WEIGHT,
+                0, 1.0f);
+
         LOG.info("Node overcommit initialized."
-                        + " IncrementPeriod={} ContainerChangeAllowsIncr={}",
-                        incrementPeriodMsec, containerChangeAllowsIncrement);
+                        + " IncrementPeriod={} ContainerChangeAllowsIncr={} RealUsageWeight={}",
+                        incrementPeriodMsec, containerChangeAllowsIncrement, realUsageWeight);
     }
 
     public boolean getEnabled() {
@@ -40,6 +46,19 @@ public class RMNodeOvercommitConfiguration {
 
     public boolean getContainerChangeAllowsIncrement() {
         return containerChangeAllowsIncrement;
+    }
+
+    public float getRealUsageWeight() {
+        return realUsageWeight;
+    }
+
+    public boolean isEstimationAtResourceManager() {
+        if ( realUsageWeight >= 0 && realUsageWeight < 1 ) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
     private static float getConfFloat(Configuration conf, String confKey,

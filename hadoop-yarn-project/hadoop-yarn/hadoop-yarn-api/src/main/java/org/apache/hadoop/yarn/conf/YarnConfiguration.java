@@ -217,7 +217,14 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_OVERCOMMIT_CONTAINER_CHANGE_ALLOWS_INCREMENT =
           RM_OVERCOMMIT_PREFIX + "container-change-allows-increment";
   public static final boolean
-      DEFAULT_RM_OVERCOMMIT_CONTAINER_CHANGE_ALLOWS_INCREMENT = true;
+          DEFAULT_RM_OVERCOMMIT_CONTAINER_CHANGE_ALLOWS_INCREMENT = true;
+
+  /** Controls where we do the estimation for Resource Usage. If real usage factor
+   * is in range [0-1), estimation is priority at node. Otherwise it should be disabled.
+   */
+  public static final String RM_OVERCOMMIT_REAL_USAGE_WEIGHT =
+          RM_OVERCOMMIT_PREFIX + "real-usage-weight";
+  public static final float DEFAULT_RM_OVERCOMMIT_REAL_USAGE_WEIGHT = 0.125f;
 
 
   /** Enable Resource Manager webapp ui actions */
