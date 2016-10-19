@@ -59,10 +59,10 @@ public class NodeResourceMonitorImpl extends AbstractService implements
     private Float realUsageWeight;
 
     /** To know the capacity of node and the allowance from user desire */
-    private long nodePhyMem;
-    private long nodePhyCore;
-    private long nodeConfiguredMem;
-    private long nodeConfiguredCore;
+    // private long nodePhyMem;
+    // private long nodePhyCore;
+    // private long nodeConfiguredMem;
+    // private long nodeConfiguredCore;
 
     /**
      * Initialize the node resource monitor.
@@ -96,12 +96,12 @@ public class NodeResourceMonitorImpl extends AbstractService implements
                 conf.getFloat(YarnConfiguration.NM_RESOURCE_MON_REAL_USAGE_WEIGHT,
                         YarnConfiguration.DEFAULT_NM_RESOURCE_MON_REAL_USAGE_WEIGHT);
 
-        this.nodePhyMem = resourceCalculatorPlugin.getPhysicalMemorySize();
-        this.nodePhyCore = resourceCalculatorPlugin.getNumProcessors();
-        this.nodeConfiguredMem = conf.getInt(YarnConfiguration.NM_PMEM_MB,
-                YarnConfiguration.DEFAULT_NM_PMEM_MB);
-        this.nodeConfiguredCore = conf.getInt(YarnConfiguration.NM_VCORES,
-                YarnConfiguration.DEFAULT_NM_VCORES);
+       // this.nodePhyMem = resourceCalculatorPlugin.getPhysicalMemorySize();
+       // this.nodePhyCore = resourceCalculatorPlugin.getNumProcessors();
+       // this.nodeConfiguredMem = conf.getInt(YarnConfiguration.NM_PMEM_MB,
+       //         YarnConfiguration.DEFAULT_NM_PMEM_MB);
+       // this.nodeConfiguredCore = conf.getInt(YarnConfiguration.NM_VCORES,
+       //         YarnConfiguration.DEFAULT_NM_VCORES);
 
         this.eMemAddedUp = 0L;
         this.eCPUAddedUp = 0L;

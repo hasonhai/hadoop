@@ -52,7 +52,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   // We need the values for the following keys in meminfo
   private static final String MEMTOTAL_STRING = "MemTotal";
-  private static final String MEMAVAILABLE_STRING = "MemAvailable"; //Ubuntu Only
+  private static final String MEMAVAILABLE_STRING = "MemAvailable"; //Ubuntu 16.04 and up
   private static final String MEMFREE_STRING = "MemFree";
   private static final String SWAPTOTAL_STRING = "SwapTotal";
   private static final String SWAPFREE_STRING = "SwapFree";

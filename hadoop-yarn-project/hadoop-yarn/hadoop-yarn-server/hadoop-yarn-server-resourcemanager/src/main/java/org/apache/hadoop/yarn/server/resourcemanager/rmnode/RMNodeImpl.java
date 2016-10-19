@@ -100,7 +100,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private int httpPort;
   private final String nodeAddress; // The containerManager address
   private String httpAddress;
-  private volatile Resource totalCapability;
+  private volatile Resource totalCapability; //actually the total allowance
   private final Node node;
 
   private String healthReport;
