@@ -101,6 +101,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final String nodeAddress; // The containerManager address
   private String httpAddress;
   private volatile Resource totalCapability; //actually the total allowance
+  private volatile Resource nodeCapacity; //real resource capacity of node
   private final Node node;
 
   private String healthReport;
@@ -230,13 +231,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
-      int cmPort, int httpPort, Node node, Resource capability, String nodeManagerVersion) {
+      int cmPort, int httpPort, Node node, Resource capability, Resource nodeCapacity,
+                    String nodeManagerVersion) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
     this.commandPort = cmPort;
     this.httpPort = httpPort;
-    this.totalCapability = capability; 
+    this.totalCapability = capability;
+    this.nodeCapacity = nodeCapacity;
     this.nodeAddress = hostName + ":" + cmPort;
     this.httpAddress = hostName + ":" + httpPort;
     this.node = node;
@@ -302,6 +305,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   @Override
   public Resource getTotalCapability() {
     return this.totalCapability;
+  }
+
+  @Override
+  public Resource getNodeCapacity() {
+    return this.nodeCapacity;
   }
 
   @Override
@@ -661,6 +669,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         if (rmNode.getTotalCapability() != newNode.getTotalCapability()) {
           rmNode.totalCapability = newNode.getTotalCapability();
           isCapabilityChanged = true;
+        }
+        if (rmNode.getNodeCapacity() != newNode.getNodeCapacity()){
+          rmNode.nodeCapacity = newNode.getNodeCapacity();
         }
       
         handleNMContainerStatus(reconnectEvent.getNMContainerStatuses(), rmNode);

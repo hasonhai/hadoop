@@ -45,14 +45,20 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeMa
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 
-
+//debug
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
     
 public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest {
   RegisterNodeManagerRequestProto proto = RegisterNodeManagerRequestProto.getDefaultInstance();
   RegisterNodeManagerRequestProto.Builder builder = null;
   boolean viaProto = false;
-  
+
+  //for debug
+  private static final Log LOG = LogFactory.getLog(RegisterNodeManagerRequestPBImpl.class);
+
   private Resource resource = null;
+  private Resource nodeCapacity = null;
   private NodeId nodeId = null;
   private List<NMContainerStatus> containerStatuses = null;
   private List<ApplicationId> runningApplications = null;
@@ -136,6 +142,33 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     if (resource == null) 
       builder.clearResource();
     this.resource = resource;
+  }
+
+  @Override
+  public Resource getNodeCapacity() {
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.nodeCapacity != null) {
+      LOG.warn("this.nodeCapacity is not null, return " + this.nodeCapacity);
+      return this.nodeCapacity;
+    }
+    if (!p.hasNodeCapacity()) {
+      LOG.warn("p.hasNodeCapacity() is false, return null");
+      return null;
+    }
+    LOG.warn("p.hasNodeCapacity() is true and this.nodeCapacity is null, return " + this.nodeCapacity);
+    this.nodeCapacity = convertFromProtoFormat(p.getNodeCapacity());
+    return this.nodeCapacity;
+  }
+
+  @Override
+  public void setNodeCapacity(Resource nodeCapacity) {
+    maybeInitBuilder();
+    if (nodeCapacity == null) {
+      builder.clearNodeCapacity();
+      LOG.warn("setNodeCapacity is called, input value is null");
+    }
+    LOG.warn("setNodeCapacity is called, input value is " + nodeCapacity);
+    this.nodeCapacity = nodeCapacity;
   }
 
   @Override

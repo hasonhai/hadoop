@@ -30,7 +30,8 @@ public abstract class RegisterNodeManagerRequest {
   public static RegisterNodeManagerRequest newInstance(NodeId nodeId,
       int httpPort, Resource resource, String nodeManagerVersionId,
       List<NMContainerStatus> containerStatuses,
-      List<ApplicationId> runningApplications) {
+      List<ApplicationId> runningApplications,
+      Resource nodeCapacity) {
     RegisterNodeManagerRequest request =
         Records.newRecord(RegisterNodeManagerRequest.class);
     request.setHttpPort(httpPort);
@@ -39,12 +40,14 @@ public abstract class RegisterNodeManagerRequest {
     request.setNMVersion(nodeManagerVersionId);
     request.setContainerStatuses(containerStatuses);
     request.setRunningApplications(runningApplications);
+    request.setNodeCapacity(nodeCapacity);
     return request;
   }
   
   public abstract NodeId getNodeId();
   public abstract int getHttpPort();
   public abstract Resource getResource();
+  public abstract Resource getNodeCapacity();
   public abstract String getNMVersion();
   public abstract List<NMContainerStatus> getNMContainerStatuses();
   
@@ -65,6 +68,7 @@ public abstract class RegisterNodeManagerRequest {
   public abstract void setNodeId(NodeId nodeId);
   public abstract void setHttpPort(int port);
   public abstract void setResource(Resource resource);
+  public abstract void setNodeCapacity(Resource nodeCapacity);
   public abstract void setNMVersion(String version);
   public abstract void setContainerStatuses(
       List<NMContainerStatus> containerStatuses);

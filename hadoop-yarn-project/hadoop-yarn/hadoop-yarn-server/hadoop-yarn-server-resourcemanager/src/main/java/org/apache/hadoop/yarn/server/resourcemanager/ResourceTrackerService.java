@@ -248,8 +248,17 @@ public class ResourceTrackerService extends AbstractService implements
     int cmPort = nodeId.getPort();
     int httpPort = request.getHttpPort();
     Resource capability = request.getResource();
+    Resource nodeCapacity = request.getNodeCapacity(); //real resource capacity of node
     String nodeManagerVersion = request.getNMVersion();
 
+    //debug: print out nodeCapacity
+    if ( nodeCapacity != null ) {
+      LOG.info("Received real resource capacity of node: " + nodeId + " " + nodeCapacity);
+    } else {
+      nodeCapacity = capability;
+      LOG.warn("Cannot get the real resource capacity of node " + nodeId +
+              ". Use configured value instead: " + capability);
+    }
     RegisterNodeManagerResponse response = recordFactory
         .newRecordInstance(RegisterNodeManagerResponse.class);
 
@@ -296,13 +305,16 @@ public class ResourceTrackerService extends AbstractService implements
       return response;
     }
 
+    //debug
+    LOG.info("Node capacity received from registering request: " + request.getNodeCapacity());
+
     response.setContainerTokenMasterKey(containerTokenSecretManager
         .getCurrentKey());
     response.setNMTokenMasterKey(nmTokenSecretManager
         .getCurrentKey());    
 
     RMNode rmNode = new RMNodeImpl(nodeId, rmContext, host, cmPort, httpPort,
-        resolve(host), capability, nodeManagerVersion);
+        resolve(host), capability, nodeCapacity, nodeManagerVersion);
 
     RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
     if (oldNode == null) {
@@ -339,7 +351,8 @@ public class ResourceTrackerService extends AbstractService implements
     String message =
         "NodeManager from node " + host + "(cmPort: " + cmPort + " httpPort: "
             + httpPort + ") " + "registered with capability: " + capability
-            + ", assigned nodeId " + nodeId;
+            + ", assigned nodeId " + nodeId + ". True Resource Capacity: " +
+            nodeCapacity;
     LOG.info(message);
     response.setNodeAction(NodeAction.NORMAL);
     response.setRMIdentifier(ResourceManager.getClusterTimeStamp());

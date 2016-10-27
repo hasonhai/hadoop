@@ -103,6 +103,12 @@ public interface RMNode {
   public Resource getTotalCapability();
 
   /**
+   * the true capacity of a node.
+   * @return the physical specs of node (memory and vcore).
+   */
+  public Resource getNodeCapacity();
+
+  /**
    * the aggregated resource utilization of the containers.
    * @return the aggregated resource utilization of the containers.
    */

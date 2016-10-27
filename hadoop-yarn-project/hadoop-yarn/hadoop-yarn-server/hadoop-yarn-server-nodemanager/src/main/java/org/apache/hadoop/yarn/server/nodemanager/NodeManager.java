@@ -97,14 +97,14 @@ public class NodeManager extends CompositeService
     super(NodeManager.class.getName());
   }
 
+  protected NodeResourceMonitor createNodeResourceMonitor() {
+    return new NodeResourceMonitorImpl();
+  }
+
   protected NodeStatusUpdater createNodeStatusUpdater(Context context,
       Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
     return new NodeStatusUpdaterImpl(context, dispatcher, healthChecker,
       metrics);
-  }
-
-  protected NodeResourceMonitor createNodeResourceMonitor() {
-    return new NodeResourceMonitorImpl();
   }
 
   protected ContainerManagerImpl createContainerManager(Context context,
@@ -230,14 +230,14 @@ public class NodeManager extends CompositeService
 
     this.context = createNMContext(containerTokenSecretManager,
         nmTokenSecretManager, nmStore);
-    
-    nodeStatusUpdater =
-        createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
 
     // Create monitoring service
     NodeResourceMonitor nodeResourceMonitor = createNodeResourceMonitor();
     addService(nodeResourceMonitor);
     ((NMContext) context).setNodeResourceMonitor(nodeResourceMonitor);
+
+    nodeStatusUpdater =
+            createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
 
     containerManager =
         createContainerManager(context, exec, del, nodeStatusUpdater,

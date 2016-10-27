@@ -93,6 +93,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private long nextHeartBeatInterval;
   private ResourceTracker resourceTracker;
   private Resource totalResource;
+  private Resource nodeResourceCapacity; // To notify RM real resource the node has
   private int httpPort;
   private String nodeManagerVersionId;
   private String minimumResourceManagerVersion;
@@ -160,7 +161,34 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.minimumResourceManagerVersion = conf.get(
         YarnConfiguration.NM_RESOURCEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_NM_RESOURCEMANAGER_MINIMUM_VERSION);
-    
+
+    //TODO: Report real resource capacity of the node
+    //Because this session start very early, there may be a case that the Resource Monitor service
+    //has not start so the capacity has not been set yet. I have move the initialization of Resource
+    //Monitor ahead of the NodeStatusUpdater Service but I'm not sure that it will work. So be careful.
+    int nodeCapacityMemoryMb = 0;
+    int nodeCapacityRealCores = 0;
+    try {
+      nodeCapacityMemoryMb = getNodePhysicalMemoryMb();
+      nodeCapacityRealCores = getNodePhysicalCores();
+      if (nodeCapacityMemoryMb == 0) {
+        LOG.warn("Cannot get the real memory capacity of node");
+      } else if (nodeCapacityRealCores == 0) {
+        LOG.warn("Cannot get the real number of physical cores of this node");
+      } else {
+        this.nodeResourceCapacity = Resource.newInstance(nodeCapacityMemoryMb, nodeCapacityRealCores);
+      }
+    } catch (Exception e) {
+      LOG.warn("Something wrong happens during reading the specs of this node: " +
+      " Memory = " + nodeCapacityMemoryMb + " physical-cores = " + nodeCapacityRealCores);
+    } finally {
+      if (this.nodeResourceCapacity == null) {
+        this.nodeResourceCapacity = this.totalResource;
+        LOG.warn("Error.Node's true resource capacity is set to the configured value" + this.nodeResourceCapacity);
+      }
+      LOG.info("Node's true resource capacity: " + this.nodeResourceCapacity);
+    }
+
     // Default duration to track stopped containers on nodemanager is 10Min.
     // This should not be assigned very large value as it will remember all the
     // containers stopped during that time.
@@ -254,23 +282,50 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @VisibleForTesting
   protected void registerWithRM()
       throws YarnException, IOException {
+
     List<NMContainerStatus> containerReports = getNMContainerStatuses();
+
+    //TODO: Modifying NodeManager Register Request to report real node capacity
+
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
-          nodeManagerVersionId, containerReports, getRunningApplications());
+          nodeManagerVersionId, containerReports, getRunningApplications(), nodeResourceCapacity);
+
     if (containerReports != null) {
       LOG.info("Registering with RM using containers :" + containerReports);
     }
-    RegisterNodeManagerResponse regNMResponse =
-        resourceTracker.registerNodeManager(request);
+
+    //TODO: null pointer exception happens somewhere near this location
+    if (nodeResourceCapacity == null) {
+      LOG.warn("Node resource capacity is null when create the registering request");
+    }
+    if (request == null) {
+      LOG.warn("Registering request is null. This will cause null_pointer_exception");
+    } else {
+      if (request.getNodeCapacity() != null) {
+        LOG.warn("Registering request has value of nodeCapacity: " + request.getNodeCapacity());
+      } else {
+        LOG.warn("Cannot find info of nodeCapacity in the registering request");
+      }
+    }
+
+    RegisterNodeManagerResponse regNMResponse = null;
+    try {
+        regNMResponse = resourceTracker.registerNodeManager(request);
+    } catch (Exception e) {
+         if (regNMResponse == null) {
+             LOG.error("Cannot get response for NodeManager registering." + e);
+         }
+    }
     this.rmIdentifier = regNMResponse.getRMIdentifier();
+
     // if the Resourcemanager instructs NM to shutdown.
     if (NodeAction.SHUTDOWN.equals(regNMResponse.getNodeAction())) {
       String message =
           "Message from ResourceManager: "
               + regNMResponse.getDiagnosticsMessage();
       throw new YarnRuntimeException(
-        "Recieved SHUTDOWN signal from Resourcemanager ,Registration of NodeManager failed, "
+        "Received SHUTDOWN signal from Resourcemanager ,Registration of NodeManager failed, "
             + message);
     }
 
@@ -381,6 +436,26 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeResourceMonitorImpl nodeResourceMonitor =
                     (NodeResourceMonitorImpl) this.context.getNodeResourceMonitor();
     return nodeResourceMonitor.getUtilization();
+  }
+
+  /**
+   * Get the real memory capacity of the node.
+   * @return Real memory of the node.
+   */
+  private int getNodePhysicalMemoryMb() {
+    NodeResourceMonitorImpl nodeResourceMonitor =
+            (NodeResourceMonitorImpl) this.context.getNodeResourceMonitor();
+    return nodeResourceMonitor.getNodeCapacityMemoryMb();
+  }
+
+  /**
+   * Get the real number of physical cores of the node.
+   * @return Real memory of the node.
+   */
+  private int getNodePhysicalCores() {
+    NodeResourceMonitorImpl nodeResourceMonitor =
+            (NodeResourceMonitorImpl) this.context.getNodeResourceMonitor();
+    return nodeResourceMonitor.getNodeCapacityRealCores();
   }
 
   // Iterate through the NMContext and clone and get all the containers'

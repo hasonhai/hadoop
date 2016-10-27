@@ -26,9 +26,15 @@ import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
  * Interface for monitoring the resources of a node.
  */
 public interface NodeResourceMonitor extends Service {
+
     /**
      * Get the <em>resource utilization</em> of the node.
      * @return <em>resource utilization</em> of the node.
      */
     public ResourceUtilization getUtilization();
+
+    public int getNodeCapacityMemoryMb();
+    public int getNodeCapacityRealCores();
+    public int getNodeConfiguredMemoryMb();
+    public int getNodeConfiguredCores();
 }
