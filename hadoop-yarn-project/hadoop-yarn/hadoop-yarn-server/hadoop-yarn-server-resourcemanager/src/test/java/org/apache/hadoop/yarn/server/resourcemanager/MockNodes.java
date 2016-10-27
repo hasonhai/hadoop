@@ -113,12 +113,13 @@ public class MockNodes {
     private Set<String> labels;
     private ResourceUtilization containersUtilization;
     private ResourceUtilization nodeUtilization;
+    private Resource nodeCapacity;
 
     public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
         Resource perNode, String rackName, String healthReport,
         long lastHealthReportTime, int cmdPort, String hostName, NodeState state,
                           Set<String> labels, ResourceUtilization containersUtilization,
-                          ResourceUtilization nodeUtilization) {
+                          ResourceUtilization nodeUtilization, Resource nodeCapacity) {
       this.nodeId = nodeId;
       this.nodeAddr = nodeAddr;
       this.httpAddress = httpAddress;
@@ -132,6 +133,7 @@ public class MockNodes {
       this.labels = labels;
       this.containersUtilization = containersUtilization;
       this.nodeUtilization = nodeUtilization;
+      this.nodeCapacity = nodeCapacity;
     }
 
     @Override
@@ -167,6 +169,11 @@ public class MockNodes {
     @Override
     public Resource getTotalCapability() {
       return this.perNode;
+    }
+
+    @Override
+    public Resource getNodeCapacity() {
+      return this.nodeCapacity;
     }
 
     @Override
@@ -255,19 +262,19 @@ public class MockNodes {
   private static RMNode buildRMNode(int rack, final Resource perNode,
       NodeState state, String httpAddr, Set<String> labels) {
     return buildRMNode(rack, perNode, state, httpAddr, NODE_ID++, null, 123,
-        labels, null, null);
+        labels, null, null, null);
   }
   
   private static RMNode buildRMNode(int rack, final Resource perNode,
       NodeState state, String httpAddr, int hostnum, String hostName, int port) {
     return buildRMNode(rack, perNode, state, httpAddr, hostnum, hostName, port,
-        null, null, null);
+        null, null, null, null);
   }
 
   private static RMNode buildRMNode(int rack, final Resource perNode,
       NodeState state, String httpAddr, int hostnum, String hostName, int port,
       Set<String> labels, ResourceUtilization containersUtilization,
-      ResourceUtilization nodeUtilization) {
+      ResourceUtilization nodeUtilization, Resource nodeCapacity) {
     final String rackName = "rack"+ rack;
     final int nid = hostnum;
     final String nodeAddr = hostName + ":" + nid;
@@ -280,7 +287,7 @@ public class MockNodes {
     String healthReport = (state == NodeState.UNHEALTHY) ? null : "HealthyMe";
     return new MockRMNodeImpl(nodeID, nodeAddr, httpAddress, perNode,
         rackName, healthReport, 0, nid, hostName, state, labels,
-        containersUtilization, nodeUtilization);
+        containersUtilization, nodeUtilization, nodeCapacity);
   }
 
   public static RMNode nodeInfo(int rack, final Resource perNode,

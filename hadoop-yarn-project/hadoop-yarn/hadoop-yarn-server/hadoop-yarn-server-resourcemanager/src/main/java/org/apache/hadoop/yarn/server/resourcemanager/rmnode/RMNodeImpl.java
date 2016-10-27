@@ -231,6 +231,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
+                    int cmPort, int httpPort, Node node, Resource capability,
+                    String nodeManagerVersion) {
+    this(nodeId, context, hostName, cmPort, httpPort, node, capability, null,
+            nodeManagerVersion);
+  }
+
+  public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
       int cmPort, int httpPort, Node node, Resource capability, Resource nodeCapacity,
                     String nodeManagerVersion) {
     this.nodeId = nodeId;
@@ -309,7 +316,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   @Override
   public Resource getNodeCapacity() {
-    return this.nodeCapacity;
+    this.readLock.lock();
+    try {
+      return this.nodeCapacity;
+    } finally {
+      this.readLock.unlock();
+    }
   }
 
   @Override

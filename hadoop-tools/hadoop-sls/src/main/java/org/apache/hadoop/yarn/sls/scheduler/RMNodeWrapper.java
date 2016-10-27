@@ -167,6 +167,11 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
+  public Resource getNodeCapacity() {
+    return node.getNodeCapacity();
+  }
+
+  @Override
   public RMNodeOvercommitConfiguration getOvercommitConfiguration() {
     return node.getOvercommitConfiguration();
   }

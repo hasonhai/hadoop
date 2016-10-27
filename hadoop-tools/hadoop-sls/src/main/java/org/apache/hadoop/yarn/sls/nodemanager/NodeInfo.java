@@ -180,6 +180,11 @@ public class NodeInfo {
     }
 
     @Override
+    public Resource getNodeCapacity() {
+      return null;
+    }
+
+    @Override
     public RMNodeOvercommitConfiguration getOvercommitConfiguration() {
       return new RMNodeOvercommitConfiguration(new Configuration(false));
     }

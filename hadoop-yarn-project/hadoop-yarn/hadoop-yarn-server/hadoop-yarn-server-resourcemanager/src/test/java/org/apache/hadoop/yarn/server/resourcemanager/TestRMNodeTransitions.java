@@ -138,7 +138,7 @@ public class TestRMNodeTransitions {
         new TestNodeListManagerEventDispatcher());
 
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
-    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
+    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null, null);
     nodesListManagerEvent =  null;
 
   }
@@ -195,7 +195,7 @@ public class TestRMNodeTransitions {
     node.handle(new RMNodeStartedEvent(null, null, null));
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost:1", 1);
-    RMNodeImpl node2 = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
+    RMNodeImpl node2 = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null, null);
     node2.handle(new RMNodeStartedEvent(null, null, null));
     
     ContainerId completedContainerIdFromNode1 = BuilderUtils.newContainerId(
@@ -466,7 +466,7 @@ public class TestRMNodeTransitions {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
-        null, capability, nmVersion);
+        null, capability, null, nmVersion);
     node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     return node;
@@ -486,14 +486,14 @@ public class TestRMNodeTransitions {
 
   private RMNodeImpl getNewNode() {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
-    RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
+    RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null, null);
     return node;
   }
   
   private RMNodeImpl getNewNode(Resource capability) {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, 
-        capability, null);
+        capability, null, null);
     return node;
   }
   
@@ -501,7 +501,7 @@ public class TestRMNodeTransitions {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
-        null, capability, null);
+        null, capability, null, null);
     node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.REBOOTING));
