@@ -92,6 +92,9 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     if (this.nodeId != null) {
       builder.setNodeId(convertToProtoFormat(this.nodeId));
     }
+    if (this.nodeCapacity != null) {
+      builder.setNodeCapacity(convertToProtoFormat(this.nodeCapacity));
+    }
 
   }
 
@@ -155,8 +158,8 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
       LOG.warn("p.hasNodeCapacity() is false, return null");
       return null;
     }
-    LOG.warn("p.hasNodeCapacity() is true and this.nodeCapacity is null, return " + this.nodeCapacity);
     this.nodeCapacity = convertFromProtoFormat(p.getNodeCapacity());
+    LOG.warn("p.hasNodeCapacity() is true and this.nodeCapacity is null, return " + this.nodeCapacity);
     return this.nodeCapacity;
   }
 

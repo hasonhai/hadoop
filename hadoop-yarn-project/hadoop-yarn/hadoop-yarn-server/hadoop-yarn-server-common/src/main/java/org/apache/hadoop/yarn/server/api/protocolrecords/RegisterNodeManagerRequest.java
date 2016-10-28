@@ -30,6 +30,14 @@ public abstract class RegisterNodeManagerRequest {
   public static RegisterNodeManagerRequest newInstance(NodeId nodeId,
       int httpPort, Resource resource, String nodeManagerVersionId,
       List<NMContainerStatus> containerStatuses,
+      List<ApplicationId> runningApplications) {
+    return newInstance(nodeId, httpPort, resource, nodeManagerVersionId,
+            containerStatuses, runningApplications, null);
+  }
+
+  public static RegisterNodeManagerRequest newInstance(NodeId nodeId,
+      int httpPort, Resource resource, String nodeManagerVersionId,
+      List<NMContainerStatus> containerStatuses,
       List<ApplicationId> runningApplications,
       Resource nodeCapacity) {
     RegisterNodeManagerRequest request =
