@@ -305,9 +305,6 @@ public class ResourceTrackerService extends AbstractService implements
       return response;
     }
 
-    //debug
-    LOG.info("Node capacity received from registering request: " + request.getNodeCapacity());
-
     response.setContainerTokenMasterKey(containerTokenSecretManager
         .getCurrentKey());
     response.setNMTokenMasterKey(nmTokenSecretManager

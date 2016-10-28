@@ -44,18 +44,11 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeMa
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
-
-//debug
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
     
 public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest {
   RegisterNodeManagerRequestProto proto = RegisterNodeManagerRequestProto.getDefaultInstance();
   RegisterNodeManagerRequestProto.Builder builder = null;
   boolean viaProto = false;
-
-  //for debug
-  private static final Log LOG = LogFactory.getLog(RegisterNodeManagerRequestPBImpl.class);
 
   private Resource resource = null;
   private Resource nodeCapacity = null;
@@ -151,15 +144,12 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   public Resource getNodeCapacity() {
     RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.nodeCapacity != null) {
-      LOG.warn("this.nodeCapacity is not null, return " + this.nodeCapacity);
       return this.nodeCapacity;
     }
     if (!p.hasNodeCapacity()) {
-      LOG.warn("p.hasNodeCapacity() is false, return null");
       return null;
     }
     this.nodeCapacity = convertFromProtoFormat(p.getNodeCapacity());
-    LOG.warn("p.hasNodeCapacity() is true and this.nodeCapacity is null, return " + this.nodeCapacity);
     return this.nodeCapacity;
   }
 
@@ -168,9 +158,7 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     maybeInitBuilder();
     if (nodeCapacity == null) {
       builder.clearNodeCapacity();
-      LOG.warn("setNodeCapacity is called, input value is null");
     }
-    LOG.warn("setNodeCapacity is called, input value is " + nodeCapacity);
     this.nodeCapacity = nodeCapacity;
   }
 

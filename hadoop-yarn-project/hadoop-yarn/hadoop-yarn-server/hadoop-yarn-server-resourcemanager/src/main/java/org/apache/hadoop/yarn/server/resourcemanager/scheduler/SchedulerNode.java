@@ -61,6 +61,7 @@ public abstract class SchedulerNode {
   private Resource usedResource = Resource.newInstance(0, 0);
   private Resource totalResourceCapability;     //node capability
   private Resource nodeTotalResourceCapability; //node capability without overcommit
+  private Resource nodeCapacity;                //node real resource
   private RMContainer reservedContainer;
   private volatile int numContainers;
 
@@ -81,13 +82,15 @@ public abstract class SchedulerNode {
   private AtomicBoolean doOvercommitUpdate = new AtomicBoolean(false);
   
   private volatile Set<String> labels = null;
-  
+
+
   public SchedulerNode(RMNode node, boolean usePortForNodeName,
       Set<String> labels) {
     this.rmNode = node;
     this.availableResource = Resources.clone(node.getTotalCapability());
     this.totalResourceCapability = Resources.clone(node.getTotalCapability());
     this.nodeTotalResourceCapability = Resources.clone(totalResourceCapability);
+    this.nodeCapacity = Resources.clone(node.getNodeCapacity());
     if (usePortForNodeName) {
       nodeName = rmNode.getHostName() + ":" + node.getNodeID().getPort();
     } else {
@@ -494,6 +497,22 @@ public abstract class SchedulerNode {
   }
 
   /**
+   * Get real resource capability of node
+   * @return
+   */
+  public Resource getNodeCapacity() {
+    return this.getNodeCapacity();
+  }
+
+  /**
+   * Set the real resource capability for node
+   * @param nodeCapacity
+   */
+  public void setNodeCapacity(Resource nodeCapacity) {
+    this.nodeCapacity = nodeCapacity;
+  }
+
+  /**
    * Get the number of preemptions on this node due to overcommit
    * @return Number of preempted containers from overcommit
    */
@@ -527,12 +546,14 @@ public abstract class SchedulerNode {
       if (!doOvercommitUpdate.getAndSet(false) && !isIncrPeriodElapsed) {
         return totalResourceCapability;
       }
-      float memUtilization = (float)nodeUtilization.getPhysicalMemory()
-              / (float)nodeTotalResourceCapability.getMemory();
-      //float memFactor = getOvercommitFactor(memUtilization);
-      //int desiredMemTotal = Math.round(newTotal.getMemory() * memFactor);
-      int desiredMemTotal = usedResource.getMemory()
-              + Math.round(newTotal.getMemory() * (1 - memUtilization));
+
+      //calculate available memory
+      int realNodeMemAvailable = nodeCapacity.getMemory()- nodeUtilization.getPhysicalMemory();
+      int aggConMemAvailable = nodeTotalResourceCapability.getMemory()
+              - Math.round(containersUtilization.getPhysicalMemory());
+
+      int memAvailable = Math.min(realNodeMemAvailable,aggConMemAvailable);
+      int desiredMemTotal = usedResource.getMemory() + memAvailable;
 
       Resource rsrv = (reservedContainer != null)
               ? reservedContainer.getReservedResource() : Resources.none();
@@ -541,17 +562,34 @@ public abstract class SchedulerNode {
       int memRsrv = usedResource.getMemory() + rsrv.getMemory();
       desiredMemTotal = Math.max(desiredMemTotal, memRsrv);
 
-      // TODO. In 2.7 getCPU() returns 0-100 representing a percentage of
-      // total CPU used on the node. In 2.8 this returns number of cores.
-      // See HADOOP-12356. unfortunately number of Vcores is hard to use
-      // because we don't know the vcore:core ratio. So, for now we assume
-      // 2.7 behavior.
-      float vcoreUtilization = nodeUtilization.getCPU() / 100.0f;
-      //float vcoreFactor = getOvercommitFactor(vcoreUtilization);
-      //int desiredVcoreTotal = Math.round(
-      //        newTotal.getVirtualCores() * vcoreFactor);
-      int desiredVcoreTotal = usedResource.getVirtualCores()
-              + Math.round(newTotal.getVirtualCores() * (1 - vcoreUtilization)); //available cores
+      // Calculate available CPU
+      // getCPU() returns 0-100 representing a percentage of
+      // total CPU used on the node.
+      int realVcoreAvailable = nodeCapacity.getVirtualCores() -
+              (int) Math.ceil((nodeUtilization.getCPU() / 100.0f)
+                      * nodeCapacity.getVirtualCores());
+      //realVcoreAvailable cannot be negative
+      if (realVcoreAvailable < 0) {
+        realVcoreAvailable = 0;
+      }
+      //Assume aggregated CPU info is presented in scale of 100 (but look like it not)
+      int aggConVcoreAvailable = nodeTotalResourceCapability.getVirtualCores() -
+              (int) Math.ceil((containersUtilization.getCPU() / 100.0f)
+                      * nodeCapacity.getVirtualCores());
+      LOG.info("aggConVcoreAvailable:" + aggConVcoreAvailable +
+              "containersUtilization.getCPU(): " + containersUtilization.getCPU()); //debug
+      //aggConVcoreAvailable cannot be negative
+      if(aggConVcoreAvailable < 0) {
+        aggConVcoreAvailable = 0;
+      }
+
+      //to ignore value aggConVcoreAvailable
+      aggConVcoreAvailable = realVcoreAvailable;
+
+      int vCoreAvailable = Math.min(realVcoreAvailable, aggConVcoreAvailable);
+      int desiredVcoreTotal = usedResource.getVirtualCores() + vCoreAvailable;
+
+      // cap overcommit increase by the specified increment or the reservation
       int vcoreRsrv = usedResource.getVirtualCores() + rsrv.getVirtualCores();
       desiredVcoreTotal = Math.max(desiredVcoreTotal, vcoreRsrv);
 
@@ -582,21 +620,16 @@ public abstract class SchedulerNode {
         }
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Overcommit for " + rmNode.getNodeAddress()
-                + " memUtil=" + memUtilization
-                + " rsrvMem=" + rsrv.getMemory()
-                + " desiredMemTotal=" + desiredMemTotal
-                + " oldMemTotal=" + oldMemTotal
-                + " newMemTotal=" + newMemTotal
-                + " vcoreUtil=" + vcoreUtilization
-                + " rsrvVcore=" + rsrv.getVirtualCores()
-                + " desiredVcoreTotal=" + desiredVcoreTotal
-                + " oldVcoreTotal=" + oldVcoreTotal
-                + " newVcoreTotal=" + newVcoreTotal);
-      }
-
       newTotal = Resource.newInstance(newMemTotal, newVcoreTotal);
+
+      LOG.info("Overcommit info of " + rmNode.getNodeAddress() +
+              " Configured Res. " + nodeTotalResourceCapability +
+              " Real specs of node " + nodeCapacity +
+              " Res. Available <" + memAvailable + "," + vCoreAvailable + ">" +
+              " Res. For Overcommit " + newTotal +
+              " Estimated Utilzation <" + nodeUtilization.getPhysicalMemory() + "," +nodeUtilization.getCPU() + ">" +
+              " Agg. Utilization: <" + containersUtilization.getPhysicalMemory()
+              + "," + containersUtilization.getCPU() + ">");
     }
     return newTotal;
   }
