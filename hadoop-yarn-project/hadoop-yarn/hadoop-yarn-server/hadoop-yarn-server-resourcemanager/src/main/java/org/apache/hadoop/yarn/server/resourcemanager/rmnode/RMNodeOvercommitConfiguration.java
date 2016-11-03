@@ -56,9 +56,7 @@ public class RMNodeOvercommitConfiguration {
         if ( realUsageWeight >= 0 && realUsageWeight < 1 ) {
             return true;
         }
-        else {
-            return false;
-        }
+        else return false;
     }
 
     private static float getConfFloat(Configuration conf, String confKey,
